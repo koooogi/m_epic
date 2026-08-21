@@ -9,13 +9,17 @@
 <body>
     <div class="container">
         <h1>🎵 Music Player</h1>
-        <p class="subtitle">Выберите песню и нажмите Play</p>
+        <p class="subtitle">Мюзикл — 9 саг</p>
         
         <div id="status" class="status">⏸ Остановлено</div>
         
+        <!-- Вкладки альбомов -->
+        <div id="albumTabs" class="album-tabs"></div>
+        
+        <!-- Список песен -->
         <div id="songList" class="song-list"></div>
         
-        <!-- ПРОГРЕСС-БАР -->
+        <!-- Прогресс-бар -->
         <div class="progress-container">
             <span id="currentTime" class="time-label">00:00</span>
             <input type="range" id="progressBar" class="progress-bar" min="0" max="100" value="0">
@@ -28,7 +32,6 @@
             <button id="nextBtn">⏭</button>
         </div>
         
-        <!-- РЕГУЛЯТОР ГРОМКОСТИ -->
         <div class="volume-container">
             <span>🔈</span>
             <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="100">

@@ -1,6 +1,7 @@
 const API_URL = 'http://localhost:8080/api';
 
 let songs = [];
+let albums = [];
 let currentIndex = 0;
 let isPlaying = false;
 let audioContext = null;
@@ -9,15 +10,32 @@ let isLoaded = false;
 let gainNode = null;
 let source = null;
 let progressInterval = null;
-let isDragging = false;  // Флаг, что пользователь перетаскивает ползунок
+let isDragging = false;
+let currentStartTime = 0;
+let currentStartPosition = 0;
+let isEnding = false;
+let currentAlbum = 'Весь мюзикл';
 
 // DOM элементы
 const progressBar = document.getElementById('progressBar');
 const currentTimeLabel = document.getElementById('currentTime');
 const totalTimeLabel = document.getElementById('totalTime');
 const volumeSlider = document.getElementById('volumeSlider');
+const albumTabs = document.getElementById('albumTabs');
 
-// Загружаем список песен с сервера
+// Загружаем альбомы
+async function loadAlbums() {
+    try {
+        const response = await fetch(`${API_URL}/albums`);
+        albums = await response.json();
+        renderAlbumTabs();
+        await loadSongs();
+    } catch (error) {
+        console.error('Ошибка загрузки альбомов:', error);
+    }
+}
+
+// Загружаем песни (все)
 async function loadSongs() {
     try {
         const response = await fetch(`${API_URL}/songs`);
@@ -35,6 +53,44 @@ async function loadSongs() {
     }
 }
 
+// Загружаем песни выбранного альбома
+async function loadAlbumSongs(albumName) {
+    currentAlbum = albumName;
+    try {
+        const response = await fetch(`${API_URL}/album/${encodeURIComponent(albumName)}`);
+        songs = await response.json();
+        currentIndex = 0;
+        progressBar.value = 0;
+        currentTimeLabel.textContent = '00:00';
+        renderSongList();
+        updateActiveSong();
+        if (songs.length > 0) {
+            await loadSongBuffer(0);
+            updateStatus('⏸ Готово: ' + songs[0].name);
+            updateCurrentSong(songs[0].name);
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки песен альбома:', error);
+    }
+}
+
+function renderAlbumTabs() {
+    albumTabs.innerHTML = '';
+    albums.forEach(album => {
+        const tab = document.createElement('div');
+        tab.className = 'album-tab';
+        if (album.name === currentAlbum) tab.classList.add('active');
+        tab.textContent = album.name + ' (' + album.songs.length + ')';
+        tab.onclick = () => {
+            stopAudio();
+            document.querySelectorAll('.album-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            loadAlbumSongs(album.name);
+        };
+        albumTabs.appendChild(tab);
+    });
+}
+
 function renderSongList() {
     const container = document.getElementById('songList');
     container.innerHTML = '';
@@ -49,6 +105,7 @@ function renderSongList() {
             currentIndex = index;
             progressBar.value = 0;
             currentTimeLabel.textContent = '00:00';
+            currentStartPosition = 0;
             loadSongBuffer(index);
             updateActiveSong();
             updateStatus('⏸ Готово: ' + song.name);
@@ -73,6 +130,7 @@ function updateCurrentSong(name) {
 }
 
 function stopAudio() {
+    isEnding = false;
     if (source) {
         try { source.stop(); } catch (e) {}
         source = null;
@@ -98,7 +156,7 @@ async function loadSongBuffer(index) {
             gainNode.connect(audioContext.destination);
         }
         
-        const response = await fetch(`/api/stream/${song.fileName}`);
+        const response = await fetch(`/api/stream/${encodeURIComponent(song.fileName)}`);
         const arrayBuffer = await response.arrayBuffer();
         audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         isLoaded = true;
@@ -132,26 +190,34 @@ function playAudio() {
         audioContext.resume();
     }
     
+    if (source) {
+        try { source.stop(); } catch (e) {}
+        source = null;
+    }
+    
     source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(gainNode);
     
-    const startPosition = parseFloat(progressBar.value);
-    source.start(0, startPosition);
+    currentStartPosition = parseFloat(progressBar.value);
+    source.start(0, currentStartPosition);
+    currentStartTime = audioContext.currentTime - currentStartPosition;
+    isEnding = false;
     
     const duration = audioBuffer.duration;
-    const startTime = audioContext.currentTime - startPosition;
     
-    // Обновление прогресса
     if (progressInterval) clearInterval(progressInterval);
     progressInterval = setInterval(() => {
-        if (!isDragging) {
-            const currentTime = audioContext.currentTime - startTime;
+        if (!isDragging && !isEnding) {
+            const currentTime = audioContext.currentTime - currentStartTime;
             if (currentTime >= duration) {
                 clearInterval(progressInterval);
                 progressInterval = null;
                 progressBar.value = duration;
                 currentTimeLabel.textContent = formatTime(duration);
+                if (isPlaying) {
+                    nextSongInternal();
+                }
             } else {
                 progressBar.value = currentTime;
                 currentTimeLabel.textContent = formatTime(currentTime);
@@ -160,19 +226,15 @@ function playAudio() {
     }, 100);
     
     source.onended = () => {
-        clearInterval(progressInterval);
-        progressInterval = null;
-        if (isPlaying) {
-            progressBar.value = 0;
-            currentTimeLabel.textContent = '00:00';
-            currentIndex = (currentIndex + 1) % songs.length;
-            loadSongBuffer(currentIndex);
-            updateActiveSong();
-            const song = songs[currentIndex];
-            updateCurrentSong(song.name);
-            updateStatus('▶️ Играет: ' + song.name);
-            if (isLoaded) {
-                playAudio();
+        if (!isEnding) {
+            isEnding = true;
+            clearInterval(progressInterval);
+            progressInterval = null;
+            if (isPlaying) {
+                const currentTime = audioContext.currentTime - currentStartTime;
+                if (currentTime >= duration - 0.5) {
+                    nextSongInternal();
+                }
             }
         }
     };
@@ -185,33 +247,40 @@ function playAudio() {
     updateActiveSong();
 }
 
+function nextSongInternal() {
+    stopAudio();
+    currentIndex = (currentIndex + 1) % songs.length;
+    progressBar.value = 0;
+    currentTimeLabel.textContent = '00:00';
+    currentStartPosition = 0;
+    loadSongBuffer(currentIndex);
+    updateActiveSong();
+    const song = songs[currentIndex];
+    updateCurrentSong(song.name);
+    updateStatus('▶️ Играет: ' + song.name);
+    if (isLoaded) {
+        playAudio();
+    }
+}
+
 // ===== ПЕРЕМОТКА =====
 
-// Когда пользователь начал тянуть ползунок
 progressBar.addEventListener('mousedown', function() {
     isDragging = true;
 });
 
-// Когда пользователь закончил тянуть ползунок
 progressBar.addEventListener('mouseup', function() {
     isDragging = false;
-    
-    // Если песня играет — перематываем
+    const newTime = parseFloat(progressBar.value);
+    currentTimeLabel.textContent = formatTime(newTime);
+    currentStartPosition = newTime;
     if (isPlaying && source) {
-        const newTime = parseFloat(progressBar.value);
-        // Останавливаем текущий источник
         source.stop();
         source = null;
-        // Запускаем с нового времени
         playAudio();
-    } else {
-        // Если не играет — просто обновляем время
-        const newTime = parseFloat(progressBar.value);
-        currentTimeLabel.textContent = formatTime(newTime);
     }
 });
 
-// При изменении ползунка (во время перетаскивания)
 progressBar.addEventListener('input', function() {
     const newTime = parseFloat(this.value);
     currentTimeLabel.textContent = formatTime(newTime);
@@ -232,11 +301,8 @@ function togglePlay() {
     if (songs.length === 0) return;
     
     if (isPlaying) {
-        // ПАУЗА
         if (source) {
-            try { 
-                source.stop(); 
-            } catch (e) {}
+            try { source.stop(); } catch (e) {}
             source = null;
         }
         if (progressInterval) {
@@ -247,7 +313,6 @@ function togglePlay() {
         document.getElementById('playBtn').textContent = '▶️';
         updateStatus('⏸ Пауза');
     } else {
-        // ВОЗОБНОВЛЕНИЕ
         if (!isLoaded) {
             loadSongBuffer(currentIndex);
             setTimeout(() => {
@@ -261,19 +326,17 @@ function togglePlay() {
 
 async function nextSong() {
     if (songs.length === 0) return;
-    
     stopAudio();
+    currentIndex = (currentIndex + 1) % songs.length;
     progressBar.value = 0;
     currentTimeLabel.textContent = '00:00';
-    
-    currentIndex = (currentIndex + 1) % songs.length;
+    currentStartPosition = 0;
     await loadSongBuffer(currentIndex);
-    const song = songs[currentIndex];
     updateActiveSong();
+    const song = songs[currentIndex];
     updateCurrentSong(song.name);
     updateStatus('⏸ Готово: ' + song.name);
     document.getElementById('playBtn').textContent = '▶️';
-    
     if (isPlaying) {
         playAudio();
     }
@@ -281,18 +344,20 @@ async function nextSong() {
 
 async function prevSong() {
     if (songs.length === 0) return;
-    
     stopAudio();
+    currentIndex = (currentIndex - 1 + songs.length) % songs.length;
     progressBar.value = 0;
     currentTimeLabel.textContent = '00:00';
-    
-    currentIndex = (currentIndex - 1 + songs.length) % songs.length;
+    currentStartPosition = 0;
     await loadSongBuffer(currentIndex);
-    const song = songs[currentIndex];
     updateActiveSong();
+    const song = songs[currentIndex];
     updateCurrentSong(song.name);
     updateStatus('⏸ Готово: ' + song.name);
     document.getElementById('playBtn').textContent = '▶️';
+    if (isPlaying) {
+        playAudio();
+    }
 }
 
 function formatTime(seconds) {
@@ -308,4 +373,4 @@ document.getElementById('nextBtn').addEventListener('click', nextSong);
 document.getElementById('prevBtn').addEventListener('click', prevSong);
 
 // Загрузка при старте
-loadSongs();
+loadAlbums();
