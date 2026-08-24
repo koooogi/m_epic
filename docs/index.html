@@ -4,114 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎵 Music Player</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #0a1628, #1a1a3e);
-            color: #c5d6e8;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .container {
-            max-width: 700px;
-            padding: 40px;
-            text-align: center;
-        }
-        h1 {
-            font-size: 72px;
-            margin-bottom: 10px;
-        }
-        h2 {
-            font-size: 32px;
-            background: linear-gradient(135deg, #89cff0, #6a4e9e);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        p {
-            font-size: 18px;
-            color: #8ba0bc;
-            margin: 20px 0;
-        }
-        .btn {
-            display: inline-block;
-            padding: 14px 32px;
-            margin: 8px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 18px;
-            font-weight: bold;
-            transition: 0.2s;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #2c5a7e, #1a3a5e);
-            color: white;
-            border: 1px solid #4a7a9e;
-        }
-        .btn-primary:hover { transform: translateY(-2px); background: linear-gradient(135deg, #3a6a8e, #2a4a6e); }
-        .btn-secondary {
-            background: #2a2a4a;
-            color: #c5d6e8;
-            border: 1px solid #4a4a6a;
-        }
-        .btn-secondary:hover { background: #3a3a5a; }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin: 30px 0;
-        }
-        .feature {
-            background: rgba(25, 35, 55, 0.6);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(100, 150, 200, 0.2);
-        }
-        .feature span { font-size: 28px; display: block; }
-        .badge {
-            background: #2c5a7e;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            color: white;
-        }
-        .footer {
-            margin-top: 40px;
-            font-size: 14px;
-            color: #4a6a8a;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>🎵</h1>
-        <h2>Music Player</h2>
-        <p>Десктопный музыкальный плеер для мюзикла<br>9 саг в одном приложении</p>
-
-        <div>
-            <a href="https://github.com/ВАШ_АККАУНТ/m_epic/releases/latest" class="btn btn-primary">⬇️ Скачать</a>
-            <a href="https://github.com/ВАШ_АККАУНТ/m_epic" class="btn btn-secondary">📦 GitHub</a>
+        <h1>🎵 Music Player</h1>
+        <p class="subtitle">Мюзикл — 9 саг</p>
+        
+        <div id="status" class="status">⏸ Остановлено</div>
+        
+        <!-- Вкладки альбомов -->
+        <div id="albumTabs" class="album-tabs"></div>
+        
+        <!-- Список песен -->
+        <div id="songList" class="song-list"></div>
+        
+        <!-- Прогресс-бар -->
+        <div class="progress-container">
+            <span id="currentTime" class="time-label">00:00</span>
+            <input type="range" id="progressBar" class="progress-bar" min="0" max="100" value="0">
+            <span id="totalTime" class="time-label">00:00</span>
         </div>
-
-        <div class="features">
-            <div class="feature"><span>📀</span> 9 саг</div>
-            <div class="feature"><span>🎵</span> MP3, WAV, FLAC</div>
-            <div class="feature"><span>📋</span> Плейлист</div>
-            <div class="feature"><span>🔀</span> Shuffle</div>
+        
+        <div class="controls">
+            <button id="prevBtn">⏮</button>
+            <button id="playBtn">▶️</button>
+            <button id="nextBtn">⏭</button>
         </div>
-
-        <p>
-            <span class="badge">🔊 Громкость</span>
-            <span class="badge">⏱ Прогресс</span>
-            <span class="badge">📂 Своя папка</span>
-        </p>
-
-        <div class="footer">
-            🖥️ Java 17+ · JavaFX · Maven<br>
-            <a href="https://github.com/ВАШ_АККАУНТ/m_epic" style="color: #4a6a8a;">Исходный код на GitHub</a>
+        
+        <div class="volume-container">
+            <span>🔈</span>
+            <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="100">
+            <span>🔊</span>
         </div>
+        
+        <div id="currentSong" class="current-song">🎵 Выберите песню</div>
     </div>
+    
+    <script src="app.js"></script>
 </body>
 </html>

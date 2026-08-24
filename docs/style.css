@@ -47,6 +47,36 @@ h1 {
     font-size: 14px;
 }
 
+/* Вкладки альбомов */
+.album-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.album-tab {
+    padding: 6px 14px;
+    background: rgba(15, 25, 40, 0.7);
+    border: 1px solid rgba(100, 150, 200, 0.2);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 13px;
+    color: #8ba0bc;
+}
+
+.album-tab:hover {
+    background: rgba(30, 50, 75, 0.8);
+}
+
+.album-tab.active {
+    background: rgba(45, 106, 45, 0.5);
+    border-color: #4a9eff;
+    color: #c5d6e8;
+}
+
+/* Список песен */
 .song-list {
     max-height: 250px;
     overflow-y: auto;
@@ -72,7 +102,7 @@ h1 {
     background: rgba(30, 50, 75, 0.9);
 }
 
-/* ПРОГРЕСС-БАР */
+/* Прогресс-бар */
 .progress-container {
     display: flex;
     align-items: center;
@@ -117,7 +147,7 @@ h1 {
     border: 2px solid #1a1a3e;
 }
 
-/* КНОПКИ УПРАВЛЕНИЯ */
+/* Кнопки */
 .controls {
     display: flex;
     justify-content: center;
@@ -142,7 +172,7 @@ h1 {
     background: linear-gradient(135deg, #3a6a8e, #2a4a6e);
 }
 
-/* РЕГУЛЯТОР ГРОМКОСТИ */
+/* Громкость */
 .volume-container {
     display: flex;
     align-items: center;
@@ -202,33 +232,4 @@ h1 {
 ::-webkit-scrollbar-thumb {
     background: #3a5a7a;
     border-radius: 4px;
-}
-
-/* Вкладки альбомов */
-.album-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 15px;
-}
-
-.album-tab {
-    padding: 8px 16px;
-    background: rgba(15, 25, 40, 0.7);
-    border: 1px solid rgba(100, 150, 200, 0.2);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-    font-size: 13px;
-    color: #8ba0bc;
-}
-
-.album-tab:hover {
-    background: rgba(30, 50, 75, 0.8);
-}
-
-.album-tab.active {
-    background: rgba(45, 106, 45, 0.5);
-    border-color: #4a9eff;
-    color: #c5d6e8;
 }
