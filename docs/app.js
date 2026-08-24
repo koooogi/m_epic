@@ -1,3 +1,32 @@
+// ===== ЛОГИ ДЛЯ ОТСЛЕЖИВАНИЯ ДЕПЛОЯ =====
+console.log('🎵 Music Player v1.0');
+console.log('📅 Время загрузки: ' + new Date().toLocaleString());
+console.log('🌐 Страница: ' + window.location.href);
+
+// Проверка версии через fetch (добавляем timestamp чтобы не кэшировалось)
+fetch('music/playlist.json?_=' + Date.now())
+    .then(response => {
+        console.log('📄 Статус playlist.json: ' + response.status);
+        if (response.ok) {
+            console.log('✅ Плейлист загружен успешно');
+        } else {
+            console.log('❌ Ошибка загрузки плейлиста: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📀 Альбомов загружено: ' + data.albums.length);
+        let totalSongs = 0;
+        data.albums.forEach(album => {
+            console.log('  📁 ' + album.name + ': ' + album.songs.length + ' песен');
+            totalSongs += album.songs.length;
+        });
+        console.log('🎵 Всего песен: ' + totalSongs);
+    })
+    .catch(error => {
+        console.error('❌ Ошибка: ' + error.message);
+    });
+
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
 let songs = [];
 let albums = [];
