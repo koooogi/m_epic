@@ -53,8 +53,6 @@ nb-configuration.xml
 Thumbs.db
 
 # Music files (если не хотите хранить в репозитории)
-music/
-*.mp3
 *.wav
 *.flac
 *.m4a
