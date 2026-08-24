@@ -6,9 +6,7 @@ let isPlaying = false;
 let audio = new Audio();
 let isDragging = false;
 let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-let allSongsBackup = [];      // ← резервная копия всех песен
-let allAlbumsBackup = [];     // ← резервная копия всех альбомов
-let isInFavorites = false;    // ← флаг, что мы в избранном
+let currentAlbum = 'all';
 
 // DOM элементы
 const progressBar = document.getElementById('progressBar');
@@ -35,7 +33,6 @@ async function loadPlaylist() {
         
         const data = await response.json();
         albums = data.albums;
-        allAlbumsBackup = JSON.parse(JSON.stringify(albums));
         
         // Собираем все песни в один список
         songs = [];
@@ -47,7 +44,6 @@ async function loadPlaylist() {
                 });
             });
         });
-        allSongsBackup = JSON.parse(JSON.stringify(songs));
         
         console.log('📀 Альбомов загружено: ' + albums.length);
         let totalSongs = 0;
@@ -93,14 +89,14 @@ function toggleFavorite(songIndex) {
     
     localStorage.setItem('favorites', JSON.stringify(favorites));
     
-    // Если мы в избранном — обновляем список
-    if (isInFavorites) {
-        renderFavorites();
+    // Обновляем список, если мы в избранном
+    if (currentAlbum === 'favorites') {
+        showFavorites();
     } else {
         renderSongList();
     }
     
-    // Обновляем счётчик
+    // Обновляем счётчик в вкладке
     const favTab = document.querySelector('.favorite-tab');
     if (favTab) {
         favTab.textContent = '⭐ Избранное (' + favorites.length + ')';
@@ -111,32 +107,33 @@ function isFavorite(songFile) {
     return favorites.some(f => f.file === songFile);
 }
 
-function renderFavorites() {
+function showFavorites() {
     if (favorites.length === 0) {
         alert('⭐ У вас пока нет избранных песен');
         return;
     }
     
-    isInFavorites = true;
+    currentAlbum = 'favorites';
     
-    // Сохраняем текущий индекс и состояние воспроизведения
+    // Сохраняем текущее состояние
     const currentSongFile = songs[currentIndex] ? songs[currentIndex].file : null;
     const wasPlaying = isPlaying;
     const currentTime = audio.currentTime;
     
-    songs = favorites.map(f => ({
+    // Показываем избранное
+    const favSongs = favorites.map(f => ({
         name: f.name,
         file: f.file,
         path: f.path,
-        album: f.album || 'Избранное'
+        album: '⭐ Избранное'
     }));
     
-    renderSongList();
+    renderSongList(favSongs);
     updateStatus('⭐ Избранное (' + favorites.length + ' песен)');
     
     // Восстанавливаем индекс
     if (currentSongFile) {
-        const newIndex = songs.findIndex(s => s.file === currentSongFile);
+        const newIndex = favSongs.findIndex(s => s.file === currentSongFile);
         if (newIndex !== -1) {
             currentIndex = newIndex;
         } else {
@@ -145,62 +142,50 @@ function renderFavorites() {
     }
     
     // Восстанавливаем воспроизведение
-    if (wasPlaying && songs.length > 0) {
+    if (wasPlaying && favSongs.length > 0) {
         loadSong(currentIndex);
         audio.currentTime = currentTime;
         playSong();
-    } else if (songs.length > 0) {
+    } else if (favSongs.length > 0) {
         loadSong(currentIndex);
     }
-    
-    // Кнопка "Назад"
-    const backBtn = document.createElement('div');
-    backBtn.className = 'back-btn';
-    backBtn.textContent = '⬅ Назад к альбомам';
-    backBtn.onclick = () => {
-        isInFavorites = false;
-        songs = allSongsBackup;
-        albums = allAlbumsBackup;
-        renderAlbumTabs();
-        renderSongList();
-        updateStatus('⏸ Остановлено');
-        
-        // Восстанавливаем индекс и воспроизведение
-        if (songs.length > 0) {
-            const currentSongFile = songs[currentIndex] ? songs[currentIndex].file : null;
-            if (currentSongFile) {
-                const existingIndex = songs.findIndex(s => s.file === currentSongFile);
-                if (existingIndex !== -1) {
-                    currentIndex = existingIndex;
-                }
-            }
-            if (isPlaying) {
-                loadSong(currentIndex);
-                audio.currentTime = audio.currentTime;
-                playSong();
-            } else {
-                loadSong(currentIndex);
-            }
-        }
-        
-        // Удаляем кнопку "Назад"
-        const btn = document.querySelector('.back-btn');
-        if (btn) btn.remove();
-    };
-    
-    // Удаляем старую кнопку "Назад", если есть
-    const oldBtn = document.querySelector('.back-btn');
-    if (oldBtn) oldBtn.remove();
-    
-    document.getElementById('songList').prepend(backBtn);
 }
 
-function showFavorites() {
-    if (favorites.length === 0) {
-        alert('⭐ У вас пока нет избранных песен');
+function loadAlbum(albumName) {
+    currentAlbum = albumName;
+    
+    // Сохраняем текущее состояние
+    const currentSongFile = songs[currentIndex] ? songs[currentIndex].file : null;
+    const wasPlaying = isPlaying;
+    const currentTime = audio.currentTime;
+    
+    if (albumName === 'favorites') {
+        showFavorites();
         return;
     }
-    renderFavorites();
+    
+    const filtered = songs.filter(s => s.album === albumName);
+    renderSongList(filtered);
+    updateStatus('⏸ ' + albumName);
+    
+    // Восстанавливаем индекс
+    if (currentSongFile) {
+        const newIndex = filtered.findIndex(s => s.file === currentSongFile);
+        if (newIndex !== -1) {
+            currentIndex = newIndex;
+        } else {
+            currentIndex = 0;
+        }
+    }
+    
+    // Восстанавливаем воспроизведение
+    if (wasPlaying && filtered.length > 0) {
+        loadSong(currentIndex);
+        audio.currentTime = currentTime;
+        playSong();
+    } else if (filtered.length > 0) {
+        loadSong(currentIndex);
+    }
 }
 
 // ===== РЕНДЕРИНГ =====
@@ -208,26 +193,28 @@ function showFavorites() {
 function renderAlbumTabs() {
     albumTabs.innerHTML = '';
     
+    // Вкладка "Избранное"
     const favTab = document.createElement('div');
     favTab.className = 'album-tab favorite-tab';
+    if (currentAlbum === 'favorites') favTab.classList.add('active');
     favTab.textContent = '⭐ Избранное (' + favorites.length + ')';
-    favTab.onclick = showFavorites;
+    favTab.onclick = () => {
+        document.querySelectorAll('.album-tab').forEach(t => t.classList.remove('active'));
+        favTab.classList.add('active');
+        loadAlbum('favorites');
+    };
     albumTabs.appendChild(favTab);
     
+    // Альбомы
     albums.forEach((album, index) => {
         const tab = document.createElement('div');
         tab.className = 'album-tab';
-        if (index === 0 && !isInFavorites) tab.classList.add('active');
+        if (album.name === currentAlbum && currentAlbum !== 'favorites') tab.classList.add('active');
         tab.textContent = album.name + ' (' + album.songs.length + ')';
         tab.onclick = () => {
-            if (isInFavorites) {
-                // Если мы в избранном — возвращаемся к альбомам
-                const backBtn = document.querySelector('.back-btn');
-                if (backBtn) backBtn.click();
-            }
             document.querySelectorAll('.album-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            filterSongsByAlbum(album.name);
+            loadAlbum(album.name);
         };
         albumTabs.appendChild(tab);
     });
@@ -237,13 +224,16 @@ function renderSongList(filteredSongs) {
     const list = filteredSongs || songs;
     songList.innerHTML = '';
     
-    // Проверяем, есть ли кнопка "Назад" (если в избранном)
-    const hasBackBtn = document.querySelector('.back-btn');
+    // Фильтруем, если показан альбом (не "all" и не "favorites")
+    let displayList = list;
+    if (currentAlbum !== 'all' && currentAlbum !== 'favorites') {
+        displayList = list.filter(s => s.album === currentAlbum);
+    }
     
-    list.forEach((song, index) => {
+    displayList.forEach((song, index) => {
         const div = document.createElement('div');
         div.className = 'song-item';
-        if (index === currentIndex && !filteredSongs) div.classList.add('active');
+        if (index === currentIndex && currentAlbum !== 'favorites') div.classList.add('active');
         
         const isFav = isFavorite(song.file);
         const starIcon = isFav ? '⭐' : '☆';
@@ -259,9 +249,11 @@ function renderSongList(filteredSongs) {
         div.addEventListener('click', (e) => {
             if (e.target.classList.contains('star-btn')) return;
             
+            // Находим глобальный индекс
             const globalIndex = songs.findIndex(s => s.file === song.file);
             if (globalIndex !== -1) {
-                loadSong(globalIndex);
+                currentIndex = globalIndex;
+                loadSong(currentIndex);
                 playSong();
             }
         });
@@ -286,18 +278,6 @@ function renderSongList(filteredSongs) {
         
         songList.appendChild(div);
     });
-}
-
-function filterSongsByAlbum(albumName) {
-    const filtered = songs.filter(s => s.album === albumName);
-    renderSongList(filtered);
-    const firstSong = filtered[0];
-    if (firstSong) {
-        const globalIndex = songs.findIndex(s => s.file === firstSong.file);
-        if (globalIndex !== -1) {
-            currentIndex = globalIndex;
-        }
-    }
 }
 
 function updateActiveSong() {
