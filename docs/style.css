@@ -6,7 +6,10 @@
 
 body {
     font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #0a1628, #1a1a3e);
+    background-image: url('background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
     color: #c5d6e8;
     min-height: 100vh;
     display: flex;
@@ -18,9 +21,10 @@ body {
     max-width: 600px;
     width: 100%;
     padding: 30px;
-    background: rgba(25, 35, 55, 0.8);
+    background: rgba(25, 35, 55, 0.85);  /* полупрозрачный фон */
     border-radius: 16px;
     border: 1px solid rgba(100, 150, 200, 0.3);
+    backdrop-filter: blur(4px);           /* размытие фона за карточкой */
 }
 
 h1 {
