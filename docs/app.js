@@ -7,6 +7,7 @@ let audio = new Audio();
 let isDragging = false;
 let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 let currentAlbum = 'all';
+let isChangingTab = false;  // ← флаг, чтобы не трогать аудио при смене вкладки
 
 // DOM элементы
 const progressBar = document.getElementById('progressBar');
@@ -51,7 +52,7 @@ async function loadPlaylist() {
             totalSongs += album.songs.length;
         });
         console.log('🎵 Всего песен: ' + totalSongs);
-        console.log('⭐ Избранных песен: ' + favorites.length);
+        console.log('🏛️ Избранных песен: ' + favorites.length);
         
         renderAlbumTabs();
         renderSongList();
@@ -95,7 +96,6 @@ function toggleFavorite(songIndex) {
         renderSongList();
     }
     
-    // Обновляем счётчик в вкладке
     const favTab = document.querySelector('.favorite-tab');
     if (favTab) {
         favTab.textContent = '🏛️ Избранное (' + favorites.length + ')';
@@ -134,7 +134,6 @@ function showFavorites() {
 function renderAlbumTabs() {
     albumTabs.innerHTML = '';
     
-    // Вкладка "Избранное" с греческим шлемом
     const favTab = document.createElement('div');
     favTab.className = 'album-tab favorite-tab';
     if (currentAlbum === 'favorites') favTab.classList.add('active');
@@ -142,11 +141,18 @@ function renderAlbumTabs() {
     favTab.onclick = () => {
         document.querySelectorAll('.album-tab').forEach(t => t.classList.remove('active'));
         favTab.classList.add('active');
+        isChangingTab = true;
         showFavorites();
+        // Восстанавливаем воспроизведение
+        if (isPlaying && songs[currentIndex]) {
+            // Просто показываем текущую песню
+            updateCurrentSong(songs[currentIndex].name);
+            updateStatus('▶️ Играет: ' + songs[currentIndex].name);
+        }
+        setTimeout(() => { isChangingTab = false; }, 100);
     };
     albumTabs.appendChild(favTab);
     
-    // Альбомы
     albums.forEach((album) => {
         const tab = document.createElement('div');
         tab.className = 'album-tab';
@@ -155,7 +161,9 @@ function renderAlbumTabs() {
         tab.onclick = () => {
             document.querySelectorAll('.album-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
+            isChangingTab = true;
             loadAlbum(album.name);
+            setTimeout(() => { isChangingTab = false; }, 100);
         };
         albumTabs.appendChild(tab);
     });
@@ -165,7 +173,6 @@ function renderSongList(list, isFavorites = false) {
     const displayList = list || songs;
     songList.innerHTML = '';
     
-    // Фильтруем по альбому, если не в избранном
     let finalList = displayList;
     if (!isFavorites && currentAlbum !== 'all' && currentAlbum !== 'favorites') {
         finalList = displayList.filter(s => s.album === currentAlbum);
@@ -175,14 +182,12 @@ function renderSongList(list, isFavorites = false) {
         const div = document.createElement('div');
         div.className = 'song-item';
         
-        // Подсвечиваем активную песню
         const currentSong = songs[currentIndex];
-        if (currentSong && song.file === currentSong.file) {
+        if (currentSong && song.file === currentSong.file && !isChangingTab) {
             div.classList.add('active');
         }
         
         const isFav = isFavorite(song.file);
-        // Иконка шлема вместо звёздочки
         const favIcon = isFav ? '🏛️' : '⬜';
         
         div.innerHTML = `
@@ -192,7 +197,6 @@ function renderSongList(list, isFavorites = false) {
             </span>
         `;
         
-        // Клик по песне
         div.addEventListener('click', (e) => {
             if (e.target.classList.contains('star-btn')) return;
             
@@ -204,7 +208,6 @@ function renderSongList(list, isFavorites = false) {
             }
         });
         
-        // Клик по иконке избранного
         const starBtn = div.querySelector('.star-btn');
         starBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -231,15 +234,20 @@ function loadAlbum(albumName) {
     renderSongList();
     updateStatus('⏸ ' + albumName);
     
-    // Если песня не выбрана, загружаем первую
-    const hasCurrentSong = songs[currentIndex] && songs[currentIndex].album === albumName;
-    if (!hasCurrentSong && songs.length > 0) {
-        const firstSong = songs.find(s => s.album === albumName);
-        if (firstSong) {
-            const idx = songs.findIndex(s => s.file === firstSong.file);
-            if (idx !== -1) {
-                currentIndex = idx;
-                loadSong(currentIndex);
+    // НЕ перезагружаем песню, если уже играет
+    const currentSong = songs[currentIndex];
+    if (currentSong) {
+        const isInAlbum = currentSong.album === albumName || albumName === 'all';
+        if (!isInAlbum) {
+            // Ищем первую песню в альбоме, но НЕ запускаем
+            const firstSong = songs.find(s => s.album === albumName);
+            if (firstSong) {
+                const idx = songs.findIndex(s => s.file === firstSong.file);
+                if (idx !== -1) {
+                    currentIndex = idx;
+                    // Просто загружаем, но не играем
+                    loadSongOnly(currentIndex);
+                }
             }
         }
     }
@@ -269,7 +277,7 @@ function updateCurrentSong(name) {
     document.getElementById('currentSong').textContent = '🎵 ' + name;
 }
 
-// ===== ЗАГРУЗКА ПЕСНИ =====
+// ===== ЗАГРУЗКА ПЕСНИ (с воспроизведением) =====
 
 function loadSong(index) {
     if (songs.length === 0) return;
@@ -304,13 +312,40 @@ function loadSong(index) {
     updateCurrentSong(song.name);
     updateStatus('⏸ Готово: ' + song.name);
     updateActiveSong();
+}
+
+// ===== ЗАГРУЗКА ПЕСНИ (без воспроизведения) =====
+
+function loadSongOnly(index) {
+    if (songs.length === 0) return;
+    if (index < 0 || index >= songs.length) return;
     
-    // Обновляем список песен, если в избранном
-    if (currentAlbum === 'favorites') {
-        renderFavorites();
-    } else {
-        renderSongList();
-    }
+    currentIndex = index;
+    const song = songs[currentIndex];
+    
+    // Сохраняем текущее состояние воспроизведения
+    const wasPlaying = isPlaying;
+    const currentTime = audio.currentTime;
+    
+    audio.src = song.path;
+    audio.load();
+    
+    audio.onloadedmetadata = () => {
+        totalTimeLabel.textContent = formatTime(audio.duration);
+        progressBar.max = audio.duration;
+        progressBar.value = currentTime || 0;
+        currentTimeLabel.textContent = formatTime(currentTime || 0);
+        
+        // Если песня играла — продолжаем
+        if (wasPlaying) {
+            audio.currentTime = currentTime || 0;
+            audio.play().catch(() => {});
+        }
+    };
+    
+    updateCurrentSong(song.name);
+    updateStatus(wasPlaying ? '▶️ Играет: ' + song.name : '⏸ Готово: ' + song.name);
+    updateActiveSong();
 }
 
 // ===== ВОСПРОИЗВЕДЕНИЕ =====
@@ -347,7 +382,6 @@ function nextSong() {
     if (songs.length === 0) return;
     
     let nextIndex = (currentIndex + 1) % songs.length;
-    // Если в избранном, переключаем по избранным
     if (currentAlbum === 'favorites') {
         const favFiles = favorites.map(f => f.file);
         const currentFile = songs[currentIndex].file;
@@ -372,7 +406,6 @@ function prevSong() {
     if (songs.length === 0) return;
     
     let prevIndex = (currentIndex - 1 + songs.length) % songs.length;
-    // Если в избранном, переключаем по избранным
     if (currentAlbum === 'favorites') {
         const favFiles = favorites.map(f => f.file);
         const currentFile = songs[currentIndex].file;
