@@ -88,23 +88,6 @@ h1 {
     color: #ffffff;
 }
 
-/* Вкладка "Избранное" */
-.favorite-tab {
-    background: rgba(180, 160, 50, 0.2) !important;
-    border-color: #f7c948 !important;
-    color: #f7c948 !important;
-}
-
-.favorite-tab:hover {
-    background: rgba(180, 160, 50, 0.4) !important;
-}
-
-.favorite-tab.active {
-    background: rgba(180, 160, 50, 0.4) !important;
-    border-color: #f7c948 !important;
-    color: #ffffff !important;
-}
-
 /* Список песен */
 .song-list {
     max-height: 250px;
@@ -135,9 +118,6 @@ h1 {
     transition: 0.2s;
     border-left: 3px solid transparent;
     color: #c0b0d0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 .song-item:hover {
@@ -149,33 +129,6 @@ h1 {
     border-left-color: #9b6bc4;
     background: rgba(80, 40, 130, 0.5);
     color: #ffffff;
-}
-
-/* Звёздочка избранного */
-.star-btn {
-    user-select: none;
-    transition: transform 0.2s;
-}
-
-.star-btn:hover {
-    transform: scale(1.3);
-}
-
-/* Кнопка "Назад" из избранного */
-.back-btn {
-    padding: 8px 15px;
-    background: rgba(100, 60, 160, 0.3);
-    border: 1px solid rgba(120, 80, 160, 0.3);
-    border-radius: 6px;
-    cursor: pointer;
-    color: #c8b0d8;
-    text-align: center;
-    margin-bottom: 10px;
-    transition: 0.2s;
-}
-
-.back-btn:hover {
-    background: rgba(100, 60, 160, 0.5);
 }
 
 /* Прогресс-бар */
@@ -301,40 +254,4 @@ h1 {
     color: #b88cd8;
     margin-top: 10px;
     border: 1px solid rgba(120, 80, 160, 0.2);
-}
-
-/* Вкладка "Избранное" */
-.favorite-tab {
-    background: rgba(180, 160, 50, 0.15) !important;
-    border-color: #f7c948 !important;
-    color: #f7c948 !important;
-}
-
-.favorite-tab:hover {
-    background: rgba(180, 160, 50, 0.3) !important;
-}
-
-.favorite-tab.active {
-    background: rgba(180, 160, 50, 0.35) !important;
-    border-color: #f7c948 !important;
-    color: #ffffff !important;
-}
-
-/* Иконка избранного */
-.star-btn {
-    user-select: none;
-    transition: transform 0.2s;
-    min-width: 20px;
-    text-align: center;
-}
-
-.star-btn:hover {
-    transform: scale(1.3);
-}
-
-/* Список песен с флексом */
-.song-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
